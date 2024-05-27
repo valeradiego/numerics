@@ -215,3 +215,22 @@ def solve_system(fvec, jacb, xvec, tol=1.0e-15, KMAX=1000):
         
     print("Máximo número de iteraciones alcanzado")
     return xvec
+
+import sympy as sp
+
+def symbolic_jacobian(fvec, vars):
+    """
+    Calcula el Jacobiano de la función vectorial fvec simbólicamente.
+    
+    Parámetros:
+    fvec : list of sympy expressions
+        Lista de expresiones simbólicas que definen la función vectorial.
+    vars : list of sympy symbols
+        Lista de variables simbólicas.
+        
+    Retorna:
+    jac : sympy.Matrix
+        Matriz Jacobiana evaluada simbólicamente.
+    """
+    jacobian_matrix = sp.Matrix(fvec).jacobian(vars)
+    return jacobian_matrix
