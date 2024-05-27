@@ -2,7 +2,7 @@
 
 # import modules
 import warnings
-
+import numpy as np
 
 # Bisection's Method
 def bisection(func, x1, x2, tol=1.0e-15,num_iter=False):
@@ -196,3 +196,22 @@ def newton_bisection(func, dfunc, x1, x2, tol=1.0e-15):
 
     print("Máximo número de iteraciones alcanzado")
     return rt
+
+def solve_system(fvec, jacb, xvec, tol=1.0e-15, KMAX=1000):
+    for k in range(1, KMAX + 1):
+        f = fvec(xvec)
+        J = jacb(xvec)
+        
+        # Resolver el sistema lineal J * dx = -f
+        dx = np.linalg.solve(J, -f)
+        
+        # Actualizar la raíz
+        xvec = xvec + dx
+        
+        # Comprobar la convergencia
+        if np.sum(np.abs(dx)) <= tol:
+            print(f"Convergencia alcanzada en {k} iteraciones.")
+            return xvec
+        
+    print("Máximo número de iteraciones alcanzado")
+    return xvec
