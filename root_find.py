@@ -2,7 +2,7 @@
 
 # import modules
 import warnings
-
+import numpy as np
 
 # Bisection's Method
 def bisection(func, x1, x2, tol=1.0e-15,num_iter=False):
@@ -155,3 +155,82 @@ def false_position(f,x1,x2,tol=1.0e-15,num_iter=False):
     if num_iter==True:
         return (root,MAXIT) 
     return root
+
+def newton_bisection(func, dfunc, x1, x2, tol=1.0e-15):
+    MAXIT = 1000  # Número máximo de iteraciones
+    f1 = func(x1)
+    f2 = func(x2)
+
+    if f1 < 0.0:
+        xl, xh = x1, x2  # dirección de búsqueda, de xl a xh
+    else:
+        xl, xh = x2, x1
+        f1, f2 = f2, f1
+
+    rt = (x1 + x2) / 2.0
+    f = func(rt)
+    df = dfunc(rt)
+    dx = xh - xl  # tamaño de paso, anterior y actual
+    dxold = dx
+
+    for i in range(MAXIT):
+        if (rt < xl and rt > xh and xh>xl) or (rt<xh and rt>xl and xl>xh) or (abs(f/df)>abs(dx/2)):
+            dxold = dx
+            dx = 0.5 * (xh - xl)
+            rt += dx  # bisección
+        else:
+            dxold = dx
+            dx = f / df
+            rt -= dx  # newton
+
+        if abs(dx) < tol * abs(rt) or f == 0:
+            return rt  # convergencia
+
+        f = func(rt)
+        df = dfunc(rt)
+
+        if f < 0.0:
+            xl = rt
+        else:
+            xh = rt
+
+    print("Máximo número de iteraciones alcanzado")
+    return rt
+
+def solve_system(fvec, jacb, xvec, tol=1.0e-15, KMAX=1000):
+    for k in range(1, KMAX + 1):
+        f = fvec(xvec)
+        J = jacb(xvec)
+        
+        # Resolver el sistema lineal J * dx = -f
+        dx = np.linalg.solve(J, -f)
+        
+        # Actualizar la raíz
+        xvec = xvec + dx
+        
+        # Comprobar la convergencia
+        if np.sum(np.abs(dx)) <= tol:
+            print(f"Convergencia alcanzada en {k} iteraciones.")
+            return xvec
+        
+    print("Máximo número de iteraciones alcanzado")
+    return xvec
+
+import sympy as sp
+
+def symbolic_jacobian(fvec, vars):
+    """
+    Calcula el Jacobiano de la función vectorial fvec simbólicamente.
+    
+    Parámetros:
+    fvec : list of sympy expressions
+        Lista de expresiones simbólicas que definen la función vectorial.
+    vars : list of sympy symbols
+        Lista de variables simbólicas.
+        
+    Retorna:
+    jac : sympy.Matrix
+        Matriz Jacobiana evaluada simbólicamente.
+    """
+    jacobian_matrix = sp.Matrix(fvec).jacobian(vars)
+    return jacobian_matrix
