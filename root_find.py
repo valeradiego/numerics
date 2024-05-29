@@ -43,10 +43,10 @@ def bisection(func, x1, x2, tol=1.0e-15,num_iter=False):
         
     warnings.warn('bisection: too many bisections')
     if num_iter==True:
-         return (root,JMAX)
+        return (root,JMAX)
     return root
     
- 
+
 # Newton's Method  
 def newton(f, df, x, tol=1.0e-15,num_iter=False):
     """
@@ -234,3 +234,107 @@ def symbolic_jacobian(fvec, vars):
     """
     jacobian_matrix = sp.Matrix(fvec).jacobian(vars)
     return jacobian_matrix
+
+# Brent's Method    
+def brent(f, a, b, rel_tol=4.0e-16, abs_tol=2.e-12):
+    """
+    Brent's algorithm for root finding.
+    
+    Arguments:
+    - f: The function for which to find the root.
+    - a, b: Initial bracketing interval [a, b].
+    - rel_tol: relative toleranece.
+    - abs_tol: relative toleranece.
+    - max_iterations: Maximum number of iterations.
+    
+    Returns:
+    - The approximate root of the function.
+    """
+
+    fa = f(a)
+    fb = f(b)
+    c = a
+    fc = fa
+    e = b - a # interval size
+    d = e     # step dx
+    
+    while (True):       
+        # root between b and c
+        # if root near c: move c,a to b, b to c 
+        # else (root near b): don't do anything
+        if (abs(fc) < abs(fb)):
+            a = b
+            b = c
+            c = a
+            fa = fb
+            fb = fc
+            fc = fa
+
+        # compute tolerance
+        tol = 2.0*rel_tol*abs(b) + abs_tol
+        # half interval size
+        m = 0.5*(c - b)
+
+        # convergence
+        if(abs(m) <= tol or fb == 0.0):
+            break
+
+        if (abs(e) < tol or abs(fa) <= abs(fb)):
+            # take bisection
+            e = m
+            d = e # new step dx
+        else:
+            s = fb/fa
+            if (a == c):
+                # attemp linear interpolation
+                p = 2.0*m*s
+                q = 1.0 - s
+            else:
+                # attemp inverse quadratic interpolation
+                q = fa/fc
+                r = fb/fc
+                p = s*(2.0*m*q*(q - r) - (b - a)*(r - 1.0))
+                q = (q - 1.0)*(r - 1.0)*(s - 1.0)
+                
+            if(0.0 < p):
+                q = -q
+            else:
+                p = -p
+
+            s = e
+                
+            # check region of interpolation
+            if (2.0*p < 3.0*m*q - abs(tol*q) and p < abs(0.5*s*q)):
+                # accept interpolation
+                e = d  # store previous d
+                d = p/q # new step dx
+            else:
+                # use bisection
+                e = m
+                d = e # new step dx
+
+        # move a to b (old root)
+        a = b
+        fa = fb
+
+        # update b (new root)
+        if (tol < abs(d)):
+            # with step d
+            b = b + d
+        elif(0.0 < m):
+            # min value of d is tol
+            b = b + tol
+        else:
+            # min value of d is tol
+            b = b - tol
+        fb = f(b)
+
+        # if root between b and a: move c to a
+        # else (root between c and b): don't do anything
+        if ((0.0 < fb and 0.0 < fc) or (fb <= 0.0 and fc <= 0.0)):
+            c = a
+            fc = fa
+            e = b - c   # new interval size
+            d = e       # new step dx
+
+    return b 
