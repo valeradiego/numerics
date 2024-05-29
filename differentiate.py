@@ -73,7 +73,7 @@ def der1(f, x, h, method):
     if method == 'f':
         df = (f(x + h) - f(x)) / h
     elif method == 'b':
-        print("complete this case")
+        print(f(x) - f(x-h)) / h
     elif method =='c':
         df = (f(x + h) - f(x - h)) / (2.*h)
     else:
@@ -140,3 +140,36 @@ def der_min_2(f, x,tol= 10**(-10), h = 0.1):
         err_new = abs(dfnew - dfold)
 
     return dfold, err_old
+
+def central_difference(f, x, h):
+    """Calculate the central difference derivative of f at x with step size h."""
+    return (f(x + h) - f(x - h)) / (2 * h)
+
+def drichardson(f, x, h0, c=2, max_iter=8, debug=False):
+    """
+    Compute the derivative of function f at x using Richardson extrapolation.
+    """
+    d = np.zeros([max_iter,max_iter], dtype=np.float64)
+    d[0][0] = central_difference(f, x, h0)
+    d_final = d[0][0]
+    err = 1000
+    
+    for row in range(1, max_iter):
+        h = h0 / (c ** row)
+        d[row][0] = central_difference(f, x, h)
+        
+        for col in range(1, row + 1):
+            d[row][col] = (c ** (2 * col) * d[row][col - 1] - d[row - 1][col - 1]) / (c ** (2 * col) - 1)
+            err_max = max(abs(d[row][col] - d[row][col - 1]), abs(d[row][col] - d[row - 1][col - 1]))
+            
+            if err_max < err:
+                err = err_max
+                d_final = d[row][col]
+            if col==row:
+                if abs(d[row][col] - d[row-1][col - 1]) > 2 * err:
+                    if debug:
+                        print(d)
+                    return [d_final, err]
+    if debug:
+        print(d)
+    return [d_final, err]

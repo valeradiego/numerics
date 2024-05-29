@@ -339,31 +339,4 @@ def brent(f, a, b, rel_tol=4.0e-16, abs_tol=2.e-12):
 
     return b 
 
-def central_difference(f, x, h):
-    """Calculate the central difference derivative of f at x with step size h."""
-    return (f(x + h) - f(x - h)) / (2 * h)
 
-def richardson_extrapolation(f, x, h0, c=2, tolerance=1e-6, max_iter=8):
-    """
-    Compute the derivative of function f at x using Richardson extrapolation.
-    """
-    d = np.zeros([8,8])
-    d[0][0] = central_difference(f, x, h0)
-    err = tolerance
-    
-    for row in range(1, max_iter + 1):
-        h = h0 / (c ** row)
-        d[row][0] = central_difference(f, x, h)
-        
-        for col in range(1, row + 1):
-            d[row][col] = (c ** (2 * col) * d[row][col - 1] - d[row - 1][col - 1]) / (c ** (2 * col) - 1)
-            err_max = max(abs(d[row][col] - d[row][col - 1]), abs(d[row][col] - d[row - 1][col - 1]))
-            
-            if err_max < err:
-                err = err_max
-                d_final = d[row][col]
-            
-            if abs(d[row][col] - d[row][col - 1]) > 2 * err:
-                return d_final
-    print(d)
-    return d_final
