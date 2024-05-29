@@ -42,7 +42,36 @@ def lagrange(x, y, xx):
     
     return sum
 
-
+def derivadalagrange(x,y,xx):
+    '''Computes the derivative of the interpolated value at xx for the discrete 
+    function given by (x, y) pairs using Lagrange interpolation.
+    INPUT:
+        x: abcisas of function to interpolate
+        y: ordinates of function to interpolate 
+        xx array or scalar to interpolate'''
+    
+    # Convert to numpy arrays
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    xx = np.asarray(xx, dtype=np.float64)
+    
+    # Convert scalar to array
+    scalar = False
+    if xx.ndim == 0:
+        xx = xx[None]  # add new axis
+        scalar = True
+    
+    n = len(x)
+    nn = len(xx)
+    j=3
+    l=1
+    sum_der = np.zeros_like(xx)
+    for i in range(0, n):
+        if (i != j):
+            l = l * (xx - x[j]) / (x[i] - x[j])
+            sum_der=sum_der+1/(x-x[i])
+    l_der=l/sum_der
+    return l_der
 
 # Piecewise intepolation
 
@@ -98,7 +127,7 @@ def spline(x, y, yp1=None, ypn=None):
         y2[i] = (sig - 1.)/p
         
         u[i] = (6.*((y[i+1] - y[i])/(x[i+1] - x[i]) - (y[i]-y[i-1])/
-         (x[i] - x[i-1]))/(x[i+1] - x[i-1]) - sig*u[i-1])/p
+        (x[i] - x[i-1]))/(x[i+1] - x[i-1]) - sig*u[i-1])/p
     
     
     # Solve tridiagonal system for second derivatives
@@ -304,3 +333,216 @@ def vander_interp(xa,ya,x):
     k=np.linalg.norm(Avander)*np.linalg.norm(inv)
     print(k)
     return evaluacion
+
+def neville_table(xi, yi, x):
+
+    m = len(x1)
+    p = yi.copy()
+
+    # El arreglo p representa una columna de la tabla
+    # k controla el numero de indices en cada columna, pues se va
+    # reduciendo en uno en cada columna sucesiva.
+    for k in range(1, m):
+        p[0:m-k] = (xi[k:m] - x)*p[0:m-k] + (x - xi[0:m-k])*p[1:m-k+1]
+        p[0:m-k] = p[0:m-k]/(xi[k:m] - xi[0:m-k])
+
+    return p[0]
+
+def neville(xi, yi, x):
+    n = len(xi)
+    xi = np.asarray(xi, dtype=np.float64)
+    yi = np.asarray(yi, dtype=np.float64)
+    inicial = np.argmin(np.abs(xi - x))
+    err=0
+    desp=0
+
+    C = np.zeros((n, n), dtype=np.float64)
+    D = np.zeros((n, n), dtype=np.float64)
+    
+    P= yi.copy()
+    for i in range(n):
+        C[i, 0] = yi[i]
+        D[i, 0] = yi[i]
+
+    for m in range(1, n):
+        for i in range(n - m):
+            xi0, xi_m = xi[i], xi[i+m]
+            C[i, m] = ((xi0-x) * C[i+1, m-1] - (xi0-x) * D[i, m-1]) / (xi0- xi_m)
+            D[i, m] = ((xi_m - x) * C[i+1, m-1] - (xi_m - x) * D[i, m-1]) / (xi0- xi_m)
+    if x<P[inicial]:
+        if inicial < n/2:
+            for k in range(1,n):
+                if k%2!=0:
+                    P[i]=P[i]+C[i,k]
+                else:
+                    P[i]=P[i+1]+D[i,k]
+                k+=1
+                err=abs(D[0,k])
+            for i in range(k,n):
+                P[0]=P[0]+C[0,i]
+                err=abs(C[0,i])
+        else:
+            for i in range(inicial,-1,-1):
+                C[:n-k],D[:n-k]=(xi[:n-k]-x)*(C[1:n-k+1]-D[:n-k])/(xi[:n-k]-xi[k:]),(xi[k:]-x)*(C[1:n-k+1]-D[:n-k])/(xi[:n-k]-xi[k:])
+                if k%2!=0:
+                    P[i]=P[i]+C[i]
+                    desp+=1
+                else:
+                    P[i]=P[i+1]+D[i,k]
+                k+=1
+                if desp+inicial==n-1:
+                    break
+            for i in range(k,n):
+                P[n-i-1]=P[n-i]+D[n-i-1,i]
+                err=abs(D[0,i])
+    elif x>P[inicial]:
+        if inicial < n/2:
+            for i in range(inicial,0,-1):
+                if k%2!=0:
+                    P[i-1]=P[i]+D[i-1,k]
+                else:
+                    P[i]=P[i]+C[i,k]
+                k+=1
+            for i in range(k,n):
+                P[0]=P[0]+C[0,i]
+                err=abs(C[0,i])
+        else:
+            for i in range(inicial,-1,-1):
+                if k%2!=0:
+                    P[i-1]=P[i]+D[i-1,k]
+                else:
+                    P[i]=P[i]+C[i,k]
+                    desp+=1
+                k+=1
+                if desp+inicial==n-1:
+                    break
+            for i in range(k,n):
+                P[n-i-1]=P[n-i]+D[n-i-1,i]
+                err=abs(D[0,i])
+    else: 
+        P[0]=yi[inicial]
+    return (P[0],err)
+
+def hermite(x,y,y_der,xx):
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    xx = np.asarray(xx, dtype=np.float64)
+    
+    # Convert scalar to array
+    scalar = False
+    if xx.ndim == 0:
+        xx = xx[None]  # add new axis
+        scalar = True
+    
+    n = len(x)
+    nn = len(xx)
+    sum = np.zeros_like(xx)
+    
+    for i in range(0, n):
+        l = np.ones(nn)
+        lprima=np.zeros(nn)
+        for j in range(0, n):
+            if (i != j):
+                l = l * (xx - x[j]) / (x[i] - x[j])
+                lprima=(1/(x[i]-x[j]))+lprima
+        h=(1-2*(xx-x[i])*lprima)*l**2
+        g=(xx-x[i])*l**2
+        sum = sum + y[i] * h + y_der[i]*g
+    
+    # Scalar case
+    if scalar:
+        return sum[0]
+    
+    return sum
+
+def hermite_der(xa,ya,der_type='harmonic'):
+    if der_type == 'harmonic':
+        xa = np.asarray(xa, dtype=np.float64)
+        ya = np.asarray(ya, dtype=np.float64)
+        
+        y_der = np.empty_like(xa)
+        h=np.empty_like(xa)
+        delta=np.empty_like(xa)
+        for i in range(len(xa)-1):
+            h[i] = xa[i+1] - xa[i]
+            delta[i]=(ya[i+1]-ya[i])/h[i]
+        for i in range(1,len(xa)-1):
+            if delta[i-1]*delta[i]>0:
+                y_der[i]=2/(1/delta[i]+1/delta[i-1])
+        y_der[0]=(2*h[0]+h[1])/(h[0]+h[1])*delta[0]-h[0]/(h[0]+h[1])*delta[1]
+        y_der[-1]=(2*-h[-1]-h[-2])/(-h[-1]-h[-2])*delta[-1]+h[-1]/(-h[-1]-h[-2])*delta[-2]
+        if y_der[0]*delta[0]<1:
+            y_der[0]=0
+        if y_der[-1]*delta[-1]<1:
+            y_der[-1]=0
+        if abs(y_der[0])>abs(3*delta[0]) and y_der[0]*delta[0]>=0:
+            y_der[0]=3*delta[0]
+        if abs(y_der[-1])>abs(3*delta[-1]) and y_der[-1]*delta[-1]>=0:
+            y_der[-1]=3*delta[-1]
+        return y_der
+    if der_type == 'arithmetic':
+        xa = np.asarray(xa, dtype=np.float64)
+        ya = np.asarray(ya, dtype=np.float64)
+        
+        y_der = np.empty_like(xa)
+        h=np.empty_like(xa)
+        delta=np.empty_like(xa)
+        for i in range(len(xa)-1):
+            h[i] = xa[i+1] - xa[i]
+            delta[i]=(ya[i+1]-ya[i])/h[i]
+        for i in range(1,len(xa)-1):
+            if delta[i-1]*delta[i]>0:
+                y_der[i]=(delta[i]+delta[i-1])/2
+        y_der[0]=(2*h[0]+h[1])/(h[0]+h[1])*delta[0]-h[0]/(h[0]+h[1])*delta[1]
+        y_der[-1]=(2*-h[-1]-h[-2])/(-h[-1]-h[-2])*delta[-1]+h[-1]/(-h[-1]-h[-2])*delta[-2]
+        if y_der[0]*delta[0]<1:
+            y_der[0]=0
+        if y_der[-1]*delta[-1]<1:
+            y_der[-1]=0
+        if abs(y_der[0])>abs(3*delta[0]) and y_der[0]*delta[0]>=0:
+            y_der[0]=3*delta[0]
+        if abs(y_der[-1])>abs(3*delta[-1]) and y_der[-1]*delta[-1]>=0:
+            y_der[-1]=3*delta[-1]
+        return y_der
+
+def hermite_segmentada(xa,ya,y_der,x):
+    xa = np.asarray(xa, dtype=np.float64)
+    ya = np.asarray(ya, dtype=np.float64)
+    x = np.asarray(x, dtype=np.float64)
+        
+    # Convert scalar to array
+    scalar = False
+    if x.ndim == 0:
+        x = x[None]  # add new axis
+        scalar = True
+    
+    # Allocate y
+    y = np.empty_like(x)
+    
+    n = len(xa)
+    for i in range(len(x)):
+        # Find interval that contains x
+        klo = 0
+        khi = n - 1
+        while (khi - klo > 1):
+            k = int((khi + klo)/2)
+            if(xa[k] > x[i]):
+                khi = k
+            else:
+                klo = k
+        
+        # Evaluate cubic polynomial in x
+        h = xa[khi] - xa[klo]
+        
+        if (h == 0.): 
+            warnings.warn('splint::err: all xa must be different')
+            return 0
+
+        
+        y[i] = hermite(xa[klo:khi+1],ya[klo:khi+1],y_der[klo:khi+1],x[i])
+    
+    # Scalar case
+    if scalar:
+        return y[0]
+    
+    return y
